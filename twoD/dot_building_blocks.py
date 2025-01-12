@@ -12,14 +12,24 @@ class DotBuildingBlocks2D(object):
         # visibility distance for the robot's end-effector. Farther than that, the robot won't see any points.
         self.vis_dist = 60.0
 
-    def compute_distance(self, prev_config, next_config):
-        # TODO: HW3 2.1
-        pass
-
+    def compute_distance(self, prev_config, next_config): 
+        # HW3 2.1
+        return np.sqrt(np.sum((prev_config - next_config) ** 2))
+    
     def sample_random_config(self, goal_prob, goal):
-        # TODO: HW3 2.1
-        pass
-
+        # HW3 2.1
+        if np.random.uniform(0,1) < goal_prob:
+            return goal
+        
+        x = np.random.uniform(self.env.xlimit[0], self.env.xlimit[1])
+        y = np.random.uniform(self.env.ylimit[0], self.env.ylimit[1])
+        config = np.array([x, y])
+        
+        if not self.config_validity_checker(config): # if not valid, sample again
+            return self.sample_random_config(goal_prob, goal)
+        
+        return config
+        
     def config_validity_checker(self, state):
         return self.env.config_validity_checker(state)
 

@@ -22,9 +22,26 @@ class BuildingBlocks2D(object):
         @param prev_config Previous configuration.
         @param next_config Next configuration.
         '''
-        # TODO: HW2 4.2.1
-        pass
-
+        # HW2 4.2.1
+        return np.sqrt(np.sum((prev_config - next_config) ** 2))
+    
+    def sample_random_config(self, goal_prob, goal):
+        # HW3 2.1
+        if np.random.uniform(0,1) < goal_prob:
+            return goal
+        
+        q1 = np.random.uniform(-np.pi, np.pi)
+        q2 = np.random.uniform(-np.pi, np.pi) 
+        q3 = np.random.uniform(-np.pi, np.pi)
+        q4 = np.random.uniform(-np.pi, np.pi)
+    
+        config = np.array([q1, q2, q3, q4])
+        
+        if not self.config_validity_checker(config): # if not valid, sample again
+            return self.sample_random_config(goal_prob, goal)
+        
+        return config
+    
     def compute_path_cost(self, path):
         totat_cost = 0
         for i in range(len(path) - 1):
@@ -37,8 +54,19 @@ class BuildingBlocks2D(object):
         @param given_config Given configuration.
         '''
         # positions are 2D points + angle (3 dimensions) for each of the links of the robot
-        # TODO: HW2 4.2.2
-        pass
+        # HW2 4.2.2
+        res = np.zeros((4, 2))
+        curr_x = 0
+        curr_y = 0
+        angle = given_config[0]
+
+        for i in range(len(self.links)):
+            curr_x += self.links[i] * np.cos(angle)
+            curr_y += self.links[i] * np.sin(angle)
+            res[i] = [curr_x, curr_y]
+            if i < len(given_config) - 1:
+                angle = self.compute_link_angle(angle, given_config[i+1])
+        return res
 
     def compute_ee_angle(self, given_config):
         '''
@@ -69,8 +97,20 @@ class BuildingBlocks2D(object):
         Verify that the given set of links positions does not contain self collisions.
         @param robot_positions Given links positions.
         '''
-        # TODO: HW2 4.2.1
-        pass
+        # HW2 4.2.1
+        lines = []
+        robot_positions = np.concatenate([np.zeros((1, 2)), robot_positions])
+        for i in range(1,len(robot_positions)):
+            lines.append(LineString([robot_positions[i], robot_positions[i-1]]))
+            
+        for i in range(len(lines)):
+            for j in range(i + 1, len(lines)):
+                if (lines[i].crosses(lines[j]) or 
+                    lines[i].overlaps(lines[j]) or
+                    lines[i].contains(lines[j]) or 
+                    lines[j].contains(lines[i])):
+                    return False
+        return True
 
     def config_validity_checker(self, config):
         '''
