@@ -29,7 +29,6 @@ class RRTInspectionPlanner(object):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
-        
         start_inspected_points = self.bb.get_inspected_points(self.start)
         self.tree.add_vertex(self.start, start_inspected_points)
         all_points = set(map(tuple, self.env.inspection_points))
@@ -42,11 +41,11 @@ class RRTInspectionPlanner(object):
                    # target_point = np.array(list(uninspected_points)[np.random.randint(len(uninspected_points))])
                    pass 
                    #print(xrand)
+                xrand = self.bb.sample_random_config(0,None)
             else:
                 xrand = self.bb.sample_random_config(0,None)
             near_idx, xnear = self.tree.get_nearest_config(xrand)
             xnew = self.extend(xnear, xrand)
-            
             if self.bb.edge_validity_checker(xnear, xnew):
                 new_inspected_points = self.bb.compute_union_of_points(self.bb.get_inspected_points(xnew),self.tree.vertices[near_idx].inspected_points)
                 new_idx = self.tree.add_vertex(xnew,new_inspected_points)
@@ -62,12 +61,12 @@ class RRTInspectionPlanner(object):
                     path.append(self.tree.vertices[curr_idx].config)
                 return np.array(path[::-1])
         return []
+    
     def compute_cost(self, plan):
         '''
         Compute and return the plan cost, which is the sum of the distances between steps in the configuration space.
         @param plan A given plan for the robot.
         '''
-      
         if len(plan) == 0:
             return float('inf') 
         return sum(self.bb.compute_distance(plan[i], plan[i+1]) for i in range(len(plan)-1))

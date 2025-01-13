@@ -66,7 +66,6 @@ def run_2d_rrt_inspection_planning():
     planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="ip")
     bb = BuildingBlocks2D(planning_env)
     planner = RRTInspectionPlanner(bb=bb, start=MAP_DETAILS["start"], ext_mode="E2", goal_prob=0.01, coverage=0.5,env = planning_env)
-
     # execute plan
     plan = planner.plan()
     Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"])
@@ -75,10 +74,9 @@ def run_dot_2d_rrt_star():
     planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
     bb = DotBuildingBlocks2D(planning_env)
     planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
-
     # execute plan
     plan = planner.plan()
-    DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
+    DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=False)
 
 def run_3d():
     ur_params = UR5e_PARAMS(inflation_factor=1)
@@ -132,18 +130,18 @@ def run_3d():
 
         visualizer.show_path(path)
 
-#def run_dot_2d_rrt(ext_mode, goal_prob):
-#    start_time = time.time()
-#    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
-#    bb = DotBuildingBlocks2D(planning_env)
-#    planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
-#    # execute plan
-#    plan = planner.plan()
-#    execution_time = time.time() - start_time
-#    DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
-#    return plan, planner.compute_cost(plan), execution_time
+def run_dot_2d_rrt_experiment(ext_mode, goal_prob):
+   start_time = time.time()
+   planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
+   bb = DotBuildingBlocks2D(planning_env)
+   planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
+   # execute plan
+   plan = planner.plan()
+   execution_time = time.time() - start_time
+   DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
+   return plan, planner.compute_cost(plan), execution_time
 
-def run_2d_rrt_motion_planning(ext_mode, goal_prob):
+def run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob):
     start_time = time.time()
     MAP_DETAILS = {"json_file": "twoD/map_mp.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
     planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="mp")
@@ -154,6 +152,7 @@ def run_2d_rrt_motion_planning(ext_mode, goal_prob):
     execution_time = time.time() - start_time
     Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"])
     return plan, planner.compute_cost(plan), execution_time
+
 
 def run_rrt_experiments():
     # Part 1: Extend function comparison using dot environment
@@ -169,7 +168,7 @@ def run_rrt_experiments():
     
     for ext_mode, goal_prob in extend_configs:
         print(f"\nTesting {ext_mode} with {goal_prob*100}% goal bias:")
-        plan, cost, time = run_dot_2d_rrt(ext_mode, goal_prob)
+        plan, cost, time = run_dot_2d_rrt_experiment(ext_mode, goal_prob)
         print(f"Cost: {cost:.2f}")
         print(f"Time: {time:.2f} seconds")
         print(f"Path shape: {plan.shape}")
@@ -190,7 +189,7 @@ def run_rrt_experiments():
         
         for trial in range(num_trials):
             print(f"Trial {trial + 1}/{num_trials}")
-            plan, cost, execution_time = run_2d_rrt_motion_planning(ext_mode, goal_prob)
+            plan, cost, execution_time = run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob)
             costs.append(cost)
             times.append(execution_time)
         
@@ -207,12 +206,189 @@ def run_rrt_experiments():
     
     return results
 
+def run_dot_2d_rrt_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
+    bb = DotBuildingBlocks2D(planning_env)
+    planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_path = f'rrt_{ext_mode}_goal{int(goal_prob*100)}.png'
+        DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
+def run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    MAP_DETAILS = {"json_file": "twoD/map_mp.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
+    planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="mp")
+    bb = BuildingBlocks2D(planning_env)
+    planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_path = f'rrt_manipulator_{ext_mode}_goal{int(goal_prob*100)}.gif'
+        Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
+def run_dot_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
+    bb = DotBuildingBlocks2D(planning_env)
+    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_path = f'rrt_{ext_mode}_goal{int(goal_prob*100)}.png'
+        DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
+def run_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    MAP_DETAILS = {"json_file": "twoD/map_mp.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
+    planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="mp")
+    bb = BuildingBlocks2D(planning_env)
+    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_path = f'rrt_manipulator_{ext_mode}_goal{int(goal_prob*100)}.gif'
+        Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
+def run_rrt_experiments():
+    with open('rrt_experiment_results.txt', 'w') as f:
+        # Part 1: Extend function comparison using dot environment
+        f.write("\nPart 1: Extend Function Comparison (Dot Environment)\n")
+        f.write("==================================================\n")
+        
+        extend_configs = [
+            ("E1", 0.05),
+            ("E1", 0.20),
+            ("E2", 0.05),
+            ("E2", 0.20)
+        ]
+        
+        for ext_mode, goal_prob in extend_configs:
+            f.write(f"\nTesting {ext_mode} with {goal_prob*100}% goal bias:\n")
+            plan, cost, time = run_dot_2d_rrt_experiment(ext_mode, goal_prob)
+            f.write(f"Cost: {cost:.2f}\n")
+            f.write(f"Time: {time:.2f} seconds\n")
+        
+        # Part 2: Performance analysis with 2D manipulator
+        f.write("\nPart 2: Performance Analysis (2D Manipulator)\n")
+        f.write("============================================\n")
+        
+        results = {}
+        num_trials = 10
+        
+        for ext_mode, goal_prob in extend_configs:
+            key = f"{ext_mode}_goal{int(goal_prob*100)}"
+            costs = []
+            times = []
+            successes = 0 
+            
+            f.write(f"\nRunning {num_trials} trials for {ext_mode} with {goal_prob*100}% goal bias\n")
+            
+            for trial in range(num_trials):
+                print(f"Trial {trial + 1}/{num_trials}")
+                visualize = False
+                # if trial == 0:
+                #     visualize=True
+                plan, cost, execution_time = run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob,visualize)
+                if plan is not None and len(plan) > 0:
+                    costs.append(cost)
+                    times.append(execution_time)
+                    successes +=1
+            success_rate = (successes / num_trials) * 100
+            if successes > 0: 
+                results[key] = {
+                    'mean_cost': np.mean(costs),
+                    'std_cost': np.std(costs),
+                    'mean_time': np.mean(times),
+                    'std_time': np.std(times),
+                    'success_rate': success_rate
+                }
+                
+                f.write(f"\nResults for {key}:\n")
+                f.write(f"Success Rate: {success_rate:.1f}%\n")
+                f.write(f"Average Cost: {results[key]['mean_cost']:.2f} ± {results[key]['std_cost']:.2f}\n")
+                f.write(f"Average Time: {results[key]['mean_time']:.2f}s ± {results[key]['std_time']:.2f}s\n")
+            else:
+                f.write(f"\nResults for {key}:\n")
+                f.write("No successful trials\n")
+
+def run_rrt_star_experiments():
+    with open('rrt_experiment_results.txt', 'w') as f:
+        # Part 1: Dot environment
+        f.write("\nPart 1: Extend Function Comparison (Dot Environment)\n")
+        f.write("==================================================\n")
+        
+        extend_configs = [
+            ("E1", 0.05),
+            ("E1", 0.20),
+            ("E2", 0.05),
+            ("E2", 0.20)
+        ]
+        for ext_mode, goal_prob in extend_configs:
+            f.write(f"\nTesting {ext_mode} with {goal_prob*100}% goal bias:\n")
+            plan, cost, time = run_dot_2d_rrt_star_experiment(ext_mode, goal_prob, visualize= True)
+            f.write(f"Cost: {cost:.2f}\n")
+            f.write(f"Time: {time:.2f} seconds\n")
+            
+        # Part 2: Performance analysis with 2D manipulator
+        f.write("\nPart 2: Performance Analysis (2D Manipulator)\n")
+        f.write("============================================\n")
+        
+        results = {}
+        num_trials = 10
+        
+        for ext_mode, goal_prob in extend_configs:
+            key = f"{ext_mode}_goal{int(goal_prob*100)}"
+            costs = []
+            times = []
+            successes = 0 
+            f.write(f"\nRunning {num_trials} trials for {ext_mode} with {goal_prob*100}% goal bias\n")
+            
+            for trial in range(num_trials):
+                print(f"Trial {trial + 1}/{num_trials}")
+                visualize = False
+                if trial == 0:
+                    visualize = True
+                plan, cost, execution_time = run_2d_rrt_star_experiment(ext_mode, goal_prob,visualize)
+                if plan is not None and len(plan) > 0:
+                    costs.append(cost)
+                    times.append(execution_time)
+                    successes +=1
+            success_rate = (successes / num_trials) * 100
+            if successes > 0: 
+                results[key] = {
+                    'mean_cost': np.mean(costs),
+                    'std_cost': np.std(costs),
+                    'mean_time': np.mean(times),
+                    'std_time': np.std(times),
+                    'success_rate': success_rate
+                }
+                
+                f.write(f"\nResults for {key}:\n")
+                f.write(f"Success Rate: {success_rate:.1f}%\n")
+                f.write(f"Average Cost: {results[key]['mean_cost']:.2f} ± {results[key]['std_cost']:.2f}\n")
+                f.write(f"Average Time: {results[key]['mean_time']:.2f}s ± {results[key]['std_time']:.2f}s\n")
+            else:
+                f.write(f"\nResults for {key}:\n")
+                f.write("No successful trials\n")     
+
 if __name__ == "__main__":
     #run_dot_2d_astar()
-    #run_dot_2d_rrt()
+    # run_dot_2d_rrt()
     # run_dot_2d_rrt_star()
-    #run_2d_rrt_motion_planning()\
+    #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
-    run_2d_rrt_inspection_planning()
+    #run_2d_rrt_inspection_planning()
     # run_3d()
     #results = run_rrt_experiments()
+    run_rrt_star_experiments

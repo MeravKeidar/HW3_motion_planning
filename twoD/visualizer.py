@@ -45,7 +45,7 @@ class Visualizer:
 
         return plan_inspected
 
-    def visualize_map(self, config, show_map=True):
+    def visualize_map(self, config, show_map=True, save_path=None):
         '''
         Visualize map with current config of robot and obstacles in the map.
         @param config The requested configuration of the robot.
@@ -59,13 +59,14 @@ class Visualizer:
 
         # add robot
         plt = self.visualize_robot(plt=plt, config=config)
-
-        # show map
-        if show_map:
-            # plt.show() # replace savefig with show if you want to display map actively
+        
+        if save_path:
+            plt.savefig(save_path)
+        elif show_map:
             plt.savefig('map.png')
-
+        plt.close()
         return plt
+
 
     def create_map_visualization(self):
         '''
@@ -172,7 +173,7 @@ class Visualizer:
         else:
             return angle
 
-    def visualize_plan(self, plan, start, goal=None):
+    def visualize_plan(self, plan, start, goal=None, save_path = None):
         '''
         Visualize the final plan as a GIF and stores it.
         @param plan Sequence of configs defining the plan.
@@ -211,5 +212,8 @@ class Visualizer:
             plan_images.append(data)
 
         # store gif
-        plan_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        if save_path:
+            imageio.mimsave(save_path, plan_images, 'GIF', duration=0.05)
+        else:
+            plan_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+            imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)

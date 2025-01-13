@@ -9,7 +9,7 @@ class DotVisualizer:
     def __init__(self, bb):
         self.bb = bb
 
-    def visualize_map(self, show_map=False, plan=None, tree_edges=None, expanded_nodes=None, start=None, goal=None):
+    def visualize_map(self, show_map=False, plan=None, tree_edges=None, expanded_nodes=None, start=None, goal=None, save_path = None):
         '''
         Visualize map with current state of robot and obstacles in the map.
         @param show_map If to show the map or save it.
@@ -41,12 +41,14 @@ class DotVisualizer:
         if goal is not None:
             plt = self.visualize_point_location(plt=plt, state=goal, color='g')
 
-        # show map
-        if show_map:
+        if save_path:  # If save path is provided, save there
+            plt.savefig(save_path)
+        elif show_map:  # If show_map is True, show it
             plt.show()
-        else:
+        else:  # Default fallback
             plt.savefig('map.png')
 
+        plt.close()
         return plt
 
     def create_map_visualization(self):
