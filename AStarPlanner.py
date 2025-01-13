@@ -24,7 +24,7 @@ class AStarPlanner(object):
 
         # define all directions the agent can take - order doesn't matter here
         self.directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (-1, -1), (-1, 1), (1, 1), (1, -1)]
-
+        
         self.epsilon = 20
         plan = self.a_star(self.start, self.goal)
         return np.array(plan)

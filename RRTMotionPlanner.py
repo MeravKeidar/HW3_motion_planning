@@ -19,7 +19,7 @@ class RRTMotionPlanner(object):
         # eta for extracting new nodes
         x_range = bb.env.xlimit[1] - bb.env.xlimit[0]
         y_range = bb.env.ylimit[1] - bb.env.ylimit[0]
-        self.eta = 0.025 * np.sqrt(x_range**2 + y_range**2) 
+        self.eta = 0.03 * np.sqrt(x_range**2 + y_range**2) 
         
     def plan(self):
         '''

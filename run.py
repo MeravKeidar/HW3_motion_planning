@@ -24,20 +24,32 @@ matplotlib.use('Agg')
 MAP_DETAILS = {"json_file": "twoD/map2.json", "start": np.array([360, 150]), "goal": np.array([100, 200])}
 
 def run_dot_2d_astar():
+    start = time.time()
     planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
     bb = DotBuildingBlocks2D(planning_env)
     planner = AStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"])
-
+    
     # execute plan
     plan = planner.plan()
+    if len(plan) == 0:
+        return float('inf') 
+    print(f'epsilon is {planner.epsilon}')
+    print(f'time diff is : {time.time() - start}')
+    print(f'cost is  {sum(bb.compute_distance(plan[i], plan[i+1]) for i in range(len(plan)-1))}')
     DotVisualizer(bb).visualize_map(plan=plan, expanded_nodes=planner.get_expanded_nodes(), show_map=True, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"])
 
 def run_dot_2d_rrt():
+    start = time.time()
     planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
     bb = DotBuildingBlocks2D(planning_env)
     planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E2", goal_prob=0.01)
     # execute plan
     plan = planner.plan()
+    if len(plan) == 0:
+        return float('inf') 
+    print(f'eta is {planner.eta}')
+    print(f'time diff is : {time.time() - start}')
+    print(f'cost is  {sum(bb.compute_distance(plan[i], plan[i+1]) for i in range(len(plan)-1))}')
     DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
 
 def run_2d_rrt_motion_planning():
@@ -53,7 +65,7 @@ def run_2d_rrt_inspection_planning():
     MAP_DETAILS = {"json_file": "twoD/map_ip.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
     planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="ip")
     bb = BuildingBlocks2D(planning_env)
-    planner = RRTInspectionPlanner(bb=bb, start=MAP_DETAILS["start"], ext_mode="E2", goal_prob=0.01, coverage=0.5)
+    planner = RRTInspectionPlanner(bb=bb, start=MAP_DETAILS["start"], ext_mode="E2", goal_prob=0.01, coverage=0.5,env = planning_env)
 
     # execute plan
     plan = planner.plan()
@@ -120,16 +132,16 @@ def run_3d():
 
         visualizer.show_path(path)
 
-def run_dot_2d_rrt(ext_mode, goal_prob):
-    start_time = time.time()
-    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
-    bb = DotBuildingBlocks2D(planning_env)
-    planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
-    # execute plan
-    plan = planner.plan()
-    execution_time = time.time() - start_time
-    DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
-    return plan, planner.compute_cost(plan), execution_time
+#def run_dot_2d_rrt(ext_mode, goal_prob):
+#    start_time = time.time()
+#    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
+#    bb = DotBuildingBlocks2D(planning_env)
+#    planner = RRTMotionPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode=ext_mode, goal_prob=goal_prob)
+#    # execute plan
+#    plan = planner.plan()
+#    execution_time = time.time() - start_time
+#    DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=True)
+#    return plan, planner.compute_cost(plan), execution_time
 
 def run_2d_rrt_motion_planning(ext_mode, goal_prob):
     start_time = time.time()
@@ -196,11 +208,11 @@ def run_rrt_experiments():
     return results
 
 if __name__ == "__main__":
-    # run_dot_2d_astar()
-    # run_dot_2d_rrt()
+    #run_dot_2d_astar()
+    #run_dot_2d_rrt()
     # run_dot_2d_rrt_star()
     #run_2d_rrt_motion_planning()\
     # analyze_rrt_performance()
-    # run_2d_rrt_inspection_planning()
+    run_2d_rrt_inspection_planning()
     # run_3d()
-    results = run_rrt_experiments()
+    #results = run_rrt_experiments()
