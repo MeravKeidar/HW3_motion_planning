@@ -132,7 +132,7 @@ class BuildingBlocks2D(object):
         non_applicable_poses = [(x[0] < self.env.xlimit[0] or x[1] < self.env.ylimit[0] or x[0] > self.env.xlimit[1] or x[1] > self.env.ylimit[1]) for x in robot_positions]
         if any(non_applicable_poses):
             return False
-
+ 
         # verify that all robot links do not collide with obstacle edges
         # for each obstacle, check collision with each of the robot links
         robot_links = [LineString([Point(x[0],x[1]),Point(y[0],y[1])]) for x,y in zip(robot_positions.tolist()[:-1], robot_positions.tolist()[1:])]
@@ -143,6 +143,24 @@ class BuildingBlocks2D(object):
                     return False
 
         return True
+
+    def edge_validity_checker_lazy(self, config1, config2):
+        """Simplified initial collision check before detailed validation"""
+        # Quick check of endpoints first
+        if not (self.config_validity_checker(config1) and self.config_validity_checker(config2)):
+            return False
+
+        # Coarse interpolation first
+        required_diff = 0.2  # Larger steps for initial check
+        interpolation_steps = int(np.linalg.norm(config2 - config1) // required_diff)
+
+        if interpolation_steps > 0:
+            interpolated_configs = np.linspace(start=config1, stop=config2, num=interpolation_steps)
+            for config in interpolated_configs:
+                if not self.config_validity_checker(config):
+                    return False
+
+        return True  # If coarse check passes, do detailed check
 
     def edge_validity_checker(self, config1, config2):
         '''
@@ -285,3 +303,122 @@ class BuildingBlocks2D(object):
         @param inspected_points list of inspected points.
         '''
         return len(inspected_points) / len(self.env.inspection_points)
+    
+    def compute_ik_for_point(self, point):
+        """
+        Compute inverse kinematics solutions for 4-DOF planar robot to reach viewing position for a point
+        @param point: The target point [x, y] to look at
+        @return: numpy array of valid configurations that might see the point
+        """
+        try:
+            if not isinstance(point, np.ndarray) or point.shape != (2,):
+                return []
+            if not np.all(np.isfinite(point)):
+                return []
+
+            theta = np.matrix(np.zeros((4, 8)))
+            optimal_distance = self.vis_dist * 0.7  # hyperparameter for viewing distance
+
+            if np.all(np.abs(point) < 1e-10):  # point at origin
+                return []
+
+            ee_angle = np.arctan2(point[1], point[0])
+            if not np.isfinite(ee_angle):
+                return []
+
+            ee_x = point[0] - optimal_distance * np.cos(ee_angle)
+            ee_y = point[1] - optimal_distance * np.sin(ee_angle)
+
+            # wrist position
+            wx = ee_x - self.links[3] * np.cos(ee_angle)
+            wy = ee_y - self.links[3] * np.sin(ee_angle)
+
+            if not (np.isfinite(wx) and np.isfinite(wy)):
+                return []
+
+            # base angle and distance to wrist
+            psi = np.arctan2(wy, wx)
+            if not np.isfinite(psi):
+                return []
+
+            d = np.sqrt(wx**2 + wy**2)
+            if not np.isfinite(d):
+                return []
+
+            max_reach = self.links[0] + self.links[1] + self.links[2]
+            min_reach = abs(self.links[0] - self.links[1] - self.links[2])
+            if d > max_reach or d < min_reach:
+                return []
+
+            # first joint angles
+            if abs(d) < 1e-10 or d > 2 * self.links[0]:
+                return []
+
+            cos_phi = d / (2 * self.links[0])
+            if abs(cos_phi) > 1:
+                return []
+
+            phi = np.arccos(cos_phi)
+            if not np.isfinite(phi):
+                return []
+
+            # Set first joint angles for all 8 possible solutions
+            theta[0, 0:4] = psi + phi
+            theta[0, 4:8] = psi - phi
+
+            solutions = []
+            # remaining joint angles
+            for i in range(8):
+                try:
+                    # First link endpoint
+                    x1 = self.links[0] * np.cos(theta[0, i])
+                    y1 = self.links[0] * np.sin(theta[0, i])
+
+                    if not (np.isfinite(x1) and np.isfinite(y1)):
+                        continue
+
+                    # Distance and angle to wrist
+                    dx = wx - x1
+                    dy = wy - y1
+                    d2 = np.sqrt(dx*dx + dy*dy)
+                    if not np.isfinite(d2) or d2 < 1e-10:
+                        continue
+
+                    alpha2 = np.arctan2(dy, dx)
+                    if not np.isfinite(alpha2):
+                        continue
+                    
+                    # Second joint angle using cosine law
+                    cos_beta2 = (d2*d2 + self.links[1]*self.links[1] - self.links[2]*self.links[2]) / (2 * d2 * self.links[1])
+                    if abs(cos_beta2) <= 1:
+                        beta2 = np.arccos(cos_beta2)
+                        if not np.isfinite(beta2):
+                            continue
+
+                        # remaining joint angles
+                        theta[1, i] = alpha2 + (-1)**(i//2) * beta2 - theta[0, i]
+                        theta[2, i] = ee_angle - theta[0, i] - theta[1, i]
+                        theta[3, i] = ee_angle - sum(theta[:3, i])
+
+                        if not np.all(np.isfinite(theta[:, i])):
+                            continue
+                        
+                        # Normalize
+                        config = np.array(theta[:, i]).flatten()
+                        config = np.mod(config + np.pi, 2 * np.pi) - np.pi
+ 
+                        if self.config_validity_checker(config):
+                            visible_points = self.get_inspected_points(config)
+                            if len(visible_points) > 0:
+                                for vp in visible_points:
+                                    if np.linalg.norm(point - vp) < 1e-6:
+                                        solutions.append(config)
+                                        break
+                                    
+                except Exception:
+                    continue
+
+            return np.array(solutions) if solutions else []
+
+        except Exception:
+            return []

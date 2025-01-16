@@ -115,7 +115,18 @@ class RRTTree(object):
 
         return knn_ids.tolist(), [self.vertices[vid].config for vid in knn_ids]
 
+    def update_subtree_costs(self, root_idx):
+        '''
+        Update costs of all descendants of the given vertex.
+        '''
+        children = [idx for idx, parent_idx in self.edges.items() if parent_idx == root_idx]
 
+        for child_idx in children:
+            edge_cost = self.bb.compute_distance(self.vertices[root_idx].config, 
+                                               self.vertices[child_idx].config)
+            self.vertices[child_idx].set_cost(self.vertices[root_idx].cost + edge_cost)
+            self.update_subtree_costs(child_idx)
+        
 class RRTVertex(object):
 
     def __init__(self, config, cost=0, inspected_points=None):

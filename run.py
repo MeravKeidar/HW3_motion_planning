@@ -17,6 +17,7 @@ from RRTStarPlanner import RRTStarPlanner
 from twoD.visualizer import Visualizer
 import time
 import matplotlib
+import json
 from matplotlib import pyplot as plt
 matplotlib.use('Agg')
 
@@ -153,7 +154,6 @@ def run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob):
     Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"])
     return plan, planner.compute_cost(plan), execution_time
 
-
 def run_rrt_experiments():
     # Part 1: Extend function comparison using dot environment
     print("\nPart 1: Extend Function Comparison (Dot Environment)")
@@ -233,33 +233,6 @@ def run_2d_rrt_motion_planning_experiment(ext_mode, goal_prob, visualize = False
         Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], save_path=save_path)
     return plan, planner.compute_cost(plan), execution_time
 
-def run_dot_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
-    start_time = time.time()
-    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
-    bb = DotBuildingBlocks2D(planning_env)
-    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
-    # execute plan
-    plan = planner.plan()
-    execution_time = time.time() - start_time
-    if plan is not None and len(plan) > 0 and visualize:
-        save_path = f'rrt_{ext_mode}_goal{int(goal_prob*100)}.png'
-        DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), save_path=save_path)
-    return plan, planner.compute_cost(plan), execution_time
-
-def run_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
-    start_time = time.time()
-    MAP_DETAILS = {"json_file": "twoD/map_mp.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
-    planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="mp")
-    bb = BuildingBlocks2D(planning_env)
-    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
-    # execute plan
-    plan = planner.plan()
-    execution_time = time.time() - start_time
-    if plan is not None and len(plan) > 0 and visualize:
-        save_path = f'rrt_manipulator_{ext_mode}_goal{int(goal_prob*100)}.gif'
-        Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], save_path=save_path)
-    return plan, planner.compute_cost(plan), execution_time
-
 def run_rrt_experiments():
     with open('rrt_experiment_results.txt', 'w') as f:
         # Part 1: Extend function comparison using dot environment
@@ -322,8 +295,45 @@ def run_rrt_experiments():
                 f.write(f"\nResults for {key}:\n")
                 f.write("No successful trials\n")
 
+def run_dot_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    planning_env = MapDotEnvironment(json_file=MAP_DETAILS["json_file"])
+    bb = DotBuildingBlocks2D(planning_env)
+    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_dir = "rrt_star"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_path = os.path.join(save_dir, f'rrt_star_dot_{ext_mode}_goal{int(goal_prob*100)}.png')
+
+        DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
+def run_2d_rrt_star_experiment(ext_mode, goal_prob, visualize = False):
+    start_time = time.time()
+    MAP_DETAILS = {"json_file": "twoD/map_mp.json", "start": np.array([0.78, -0.78, 0.0, 0.0]), "goal": np.array([0.3, 0.15, 1.0, 1.1])}
+    planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="mp")
+    bb = BuildingBlocks2D(planning_env)
+    planner = RRTStarPlanner(bb=bb, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], ext_mode="E1", goal_prob=0.01, k=1, max_step_size=None)
+    # execute plan
+    plan = planner.plan()
+    execution_time = time.time() - start_time
+    if plan is not None and len(plan) > 0 and visualize:
+        save_dir = "rrt_star"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_path = os.path.join(save_dir, f'rrt_star_manipulator_{ext_mode}_goal{int(goal_prob*100)}.gif')
+        Visualizer(bb).visualize_plan(plan=plan, start=MAP_DETAILS["start"], goal=MAP_DETAILS["goal"], save_path=save_path)
+    return plan, planner.compute_cost(plan), execution_time
+
 def run_rrt_star_experiments():
-    with open('rrt_experiment_results.txt', 'w') as f:
+    results_dir = "rrt_star"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    with open('rrt_star_experiment_results.txt', 'w') as f:
         # Part 1: Dot environment
         f.write("\nPart 1: Extend Function Comparison (Dot Environment)\n")
         f.write("==================================================\n")
@@ -382,6 +392,136 @@ def run_rrt_star_experiments():
                 f.write(f"\nResults for {key}:\n")
                 f.write("No successful trials\n")     
 
+
+def run_inspection_comparison():
+    """Compare different RRT inspection planning methods"""
+    results_dir = "inspection_comparison_results"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Test parameters
+    MAP_DETAILS = {"json_file": "twoD/map_ip.json", "start": np.array([0.78, -0.78, 0.0, 0.0])}
+    num_trials = 10
+    coverage_levels = [0.5, 0.75]
+    goal_probs = [0.2, 0.3]
+    
+    # All combinations of methods
+    methods = {
+        'original_regular': {'planner': 'plan', 'sampling': 'regular'},
+        'original_ik': {'planner': 'plan', 'sampling': 'ik'},
+        'optimized_regular': {'planner': 'optimized_plan', 'sampling': 'regular'},
+        'optimized_ik': {'planner': 'optimized_plan', 'sampling': 'ik'}
+    }
+    
+    results = {method: {} for method in methods.keys()}
+    labels = []
+    
+    for coverage in coverage_levels:
+        for goal_prob in goal_probs:
+            print(f"\nTesting with coverage={coverage}, goal_prob={goal_prob}")
+            label = f"Cov={coverage}\nProb={goal_prob}"
+            labels.append(label)
+            
+            for method_name, method_config in methods.items():
+                results[method_name][label] = {
+                    'times': [],
+                    'costs': [],
+                    'successes': 0
+                }
+                
+                for trial in range(num_trials):
+                    print(f"Method: {method_name}, Trial {trial + 1}/{num_trials}")
+                    
+                    # Setup environment
+                    planning_env = MapEnvironment(json_file=MAP_DETAILS["json_file"], task="ip")
+                    bb = BuildingBlocks2D(planning_env)
+                    planner = RRTInspectionPlanner(bb=bb, start=MAP_DETAILS["start"], 
+                                                ext_mode="E2", goal_prob=goal_prob, 
+                                                coverage=coverage, env=planning_env)
+                    
+                    # Set sampling method
+                    if method_config['sampling'] == 'ik':
+                        planner.sample_biased_config = planner.sample_biased_config_ik
+                    
+                    # Run appropriate planner method
+                    start_time = time.time()
+                    plan = getattr(planner, method_config['planner'])()
+                    execution_time = time.time() - start_time
+                    
+                    if len(plan) > 0:
+                        results[method_name][label]['times'].append(execution_time)
+                        results[method_name][label]['costs'].append(planner.compute_cost(plan))
+                        results[method_name][label]['successes'] += 1
+    
+    # Create visualizations
+    plt.figure(figsize=(15, 5))
+    
+    # Plot execution times
+    plt.subplot(131)
+    x = np.arange(len(labels))
+    width = 0.2
+    for i, (method_name, method_data) in enumerate(results.items()):
+        times = [np.mean(method_data[label]['times']) if method_data[label]['times'] else 0 for label in labels]
+        plt.bar(x + i*width - width*1.5, times, width, label=method_name)
+    plt.ylabel('Average Time (s)')
+    plt.title('Execution Time Comparison')
+    plt.xticks(x, labels, rotation=45)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Plot costs
+    plt.subplot(132)
+    for i, (method_name, method_data) in enumerate(results.items()):
+        costs = [np.mean(method_data[label]['costs']) if method_data[label]['costs'] else 0 for label in labels]
+        plt.bar(x + i*width - width*1.5, costs, width, label=method_name)
+    plt.ylabel('Average Path Cost')
+    plt.title('Path Cost Comparison')
+    plt.xticks(x, labels, rotation=45)
+    
+    # Plot success rates
+    plt.subplot(133)
+    for i, (method_name, method_data) in enumerate(results.items()):
+        success_rates = [(method_data[label]['successes'] / num_trials) * 100 for label in labels]
+        plt.bar(x + i*width - width*1.5, success_rates, width, label=method_name)
+    plt.ylabel('Success Rate (%)')
+    plt.title('Success Rate Comparison')
+    plt.xticks(x, labels, rotation=45)
+    
+    plt.tight_layout()
+    
+    # Save results
+    exp_name = f"comparison_results_{timestamp}"
+    plt.savefig(os.path.join(results_dir, f"{exp_name}_plot.png"))
+    
+    # Save detailed results
+    with open(os.path.join(results_dir, f"{exp_name}_summary.txt"), 'w') as f:
+        for coverage in coverage_levels:
+            for goal_prob in goal_probs:
+                label = f"Cov={coverage}\nProb={goal_prob}"
+                f.write(f"\nResults for coverage={coverage}, goal_prob={goal_prob}:\n")
+                f.write("="*50 + "\n")
+                
+                for method_name, method_data in results.items():
+                    f.write(f"\n{method_name}:\n")
+                    data = method_data[label]
+                    
+                    if data['successes'] > 0:
+                        avg_time = np.mean(data['times'])
+                        std_time = np.std(data['times'])
+                        avg_cost = np.mean(data['costs'])
+                        std_cost = np.std(data['costs'])
+                        success_rate = (data['successes'] / num_trials) * 100
+                        
+                        f.write(f"Success Rate: {success_rate:.1f}%\n")
+                        f.write(f"Average Time: {avg_time:.2f}s ± {std_time:.2f}s\n")
+                        f.write(f"Average Cost: {avg_cost:.2f} ± {std_cost:.2f}\n")
+                    else:
+                        f.write("No successful trials\n")
+                f.write("\n" + "-"*50 + "\n")
+    
+    return results
+
 if __name__ == "__main__":
     #run_dot_2d_astar()
     # run_dot_2d_rrt()
@@ -391,4 +531,5 @@ if __name__ == "__main__":
     #run_2d_rrt_inspection_planning()
     # run_3d()
     #results = run_rrt_experiments()
-    run_rrt_star_experiments
+    # run_rrt_star_experiments()
+    run_inspection_comparison()
