@@ -20,9 +20,12 @@ class RRTStarPlanner(object):
         self.ext_mode = ext_mode
         self.goal_prob = goal_prob
         self.k = k
-
-        self.step_size = max_step_size
-        
+        if max_step_size:
+            self.step_size = max_step_size
+        else:
+            x_range = bb.env.xlimit[1] - bb.env.xlimit[0]
+            y_range = bb.env.ylimit[1] - bb.env.ylimit[0]
+            self.step_size = 0.03 * np.sqrt(x_range**2 + y_range**2) 
         self.planning_time = 0
         self.path_cost = float('inf')
         self.num_vertices = 0
@@ -48,15 +51,15 @@ class RRTStarPlanner(object):
             self.tree.add_edge(near_idx, new_idx)
             edge_cost = self.bb.compute_distance(xnear, xnew)
             self.tree.vertices[new_idx].set_cost(self.tree.vertices[near_idx].cost + edge_cost)
-
-            k_nearest_ids, _ = self.tree.get_k_nearest_neighbors(xnew, self.k)
+            k = min(self.k, len(self.tree.vertices)-1)
+            k_nearest_ids, _ = self.tree.get_k_nearest_neighbors(xnew, k)
             
             for node_idx in k_nearest_ids:
-                if node_idx != near_idx:
+                if node_idx != new_idx:
                     self.rewire(node_idx, new_idx)
             
             for node_idx in k_nearest_ids:
-                if node_idx != near_idx:
+                if node_idx != new_idx:
                     self.rewire(new_idx, node_idx)
                 
             if np.allclose(xnew, self.goal, atol=1e-3):

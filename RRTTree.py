@@ -108,7 +108,6 @@ class RRTTree(object):
         dists = []
         for _, vertex in self.vertices.items():
             dists.append(self.bb.compute_distance(config, vertex.config))
-
         dists = np.array(dists)
         knn_ids = np.argpartition(dists, k)[:k]
         #knn_dists = [dists[i] for i in knn_ids]
