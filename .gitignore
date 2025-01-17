@@ -5059,3 +5059,4 @@ RRT_goal_bias_20.gif
 rrt_tree_E1.png
 rrt_tree_E2.png
 3d_experiment_results.txt
+best_path.npy

@@ -1,3 +1,4 @@
+import gc
 import numpy as np
 import os
 from datetime import datetime
@@ -19,7 +20,7 @@ import time
 import matplotlib
 import json
 from matplotlib import pyplot as plt
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 
 
 # MAP_DETAILS = {"json_file": "twoD/map1.json", "start": np.array([10,10]), "goal": np.array([4, 6])}
@@ -178,134 +179,6 @@ def run_3d_experiment(step, goal, visualize = True):
         else:
             print("plan failed \n")
     return plan, rrt_star_planner.compute_cost(plan), execution_time
-
-def run_3d():
-    options = [
-        (0.05,0.05), (0.075,0.05), (0.1,0.05), (0.125,0.05),
-        (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
-        (0.05,0.2), (0.075,0.2), (0.1,0.2), (0.125,0.2),
-        (0.2,0.2), (0.25,0.2), (0.3,0.2), (0.4,0.2)
-    ]
-    env2_start = np.deg2rad([110, -70, 90, -90, -90, 0])
-    env2_goal = np.deg2rad([50, -80, 90, -90, -90, 0])
-    
-    now_3d = time.gmtime()
-    results = {}
-    num_trials = 20
-    
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-    colors = ['blue', 'red']  # One color for each p_bias value
-    
-    p_bias_results = {0.05: {'steps': [], 'costs': [], 'times': [], 'success_rates': []},
-                      0.2: {'steps': [], 'costs': [], 'times': [], 'success_rates': []}}
-    
-    # Track best path
-    best_path = None
-    best_cost = float('inf')
-    best_config = None
-
-    with open(f'3d_experiment_results.txt', 'w') as f:
-        for step, goal in options:
-            key = f"{step}_goal{int(goal*100)}"
-            costs = []
-            times = []
-            successes = 0
-            
-            f.write(f"\nRunning {num_trials} trials for {step} step size with {goal*100}% goal bias\n")
-            print(f"\nRunning {num_trials} trials for step={step}, goal_bias={goal}")
-            
-            for trial in range(num_trials):
-                print(f"Trial {trial + 1}/{num_trials}")
-                visualize = (trial == 0)  # Only visualize first trial
-                plan, cost, execution_time = run_3d_experiment(step, goal, visualize)
-                
-                if plan is not None and len(plan) > 0:
-                    costs.append(cost)
-                    times.append(execution_time)
-                    successes += 1
-                    if cost < best_cost:
-                        best_path = plan
-                        best_cost = cost
-                        best_config = (step, goal, trial)
-                        # save the best path
-                        np.save('best_path.npy', best_path)
-                        f.write(f"\nNew best path found!\n")
-                        f.write(f"Configuration: step_size={step}, goal_bias={goal}, trial={trial}\n")
-                        f.write(f"Cost: {cost}\n")
-                        # save a visualization of the best path
-                        visualizer = Visualize_UR(ur_params=UR5e_PARAMS(inflation_factor=1), 
-                                               env=Environment(env_idx=2),
-                                               transform=Transform(UR5e_PARAMS(inflation_factor=1)),
-                                               bb=None)
-                        visualizer.show_path(best_path)
-                        plt.savefig('best_path_visualization.png')
-                        plt.close()
-
-            success_rate = (successes / num_trials) * 100
-            if successes > 0:
-                mean_cost = np.mean(costs)
-                std_cost = np.std(costs)
-                mean_time = np.mean(times)
-                std_time = np.std(times)
-                
-                p_bias_results[goal]['steps'].append(step)
-                p_bias_results[goal]['costs'].append(mean_cost)
-                p_bias_results[goal]['times'].append(mean_time)
-                p_bias_results[goal]['success_rates'].append(success_rate)
-                
-                f.write(f"\nResults for {key}:\n")
-                f.write(f"Success Rate: {success_rate:.1f}%\n")
-                f.write(f"Average Cost: {mean_cost:.2f} ± {std_cost:.2f}\n")
-                f.write(f"Average Time: {mean_time:.2f}s ± {std_time:.2f}s\n")
-            else:
-                f.write(f"\nResults for {key}:\n")
-                f.write("No successful trials\n")
-    
-    # Create plots
-    for i, p_bias in enumerate([0.05, 0.2]):
-        data = p_bias_results[p_bias]
-        if len(data['times']) > 0: 
-            # Cost vs Time
-            ax1.plot(data['times'], data['costs'], 'o-', 
-                    label=f'p_bias={p_bias}', color=colors[i])
-            
-            # Success Rate vs Time
-            ax2.plot(data['times'], data['success_rates'], 'o-',
-                    label=f'p_bias={p_bias}', color=colors[i])
-            
-            # Cost vs Step Size
-            ax3.plot(data['steps'], data['costs'], 'o-',
-                    label=f'p_bias={p_bias}', color=colors[i])
-            
-            # Success Rate vs Step Size
-            ax4.plot(data['steps'], data['success_rates'], 'o-',
-                    label=f'p_bias={p_bias}', color=colors[i])
-    
-    # Configure plots
-    ax1.set(xlabel='Computation Time (s)', ylabel='Path Cost',
-            title='Cost vs Computation Time')
-    ax2.set(xlabel='Computation Time (s)', ylabel='Success Rate (%)',
-            title='Success Rate vs Computation Time')
-    ax3.set(xlabel='Max Step Size', ylabel='Path Cost',
-            title='Cost vs Max Step Size')
-    ax4.set(xlabel='Max Step Size', ylabel='Success Rate (%)',
-            title='Success Rate vs Max Step Size')
-    
-    for ax in [ax1, ax2, ax3, ax4]:
-        ax.grid(True)
-        ax.legend()
-    
-    plt.tight_layout()
-    plt.savefig('rrt_star_3d_analysis.png')
-    plt.close()
-
-    print("\nBest path summary:")
-    print(f"Step size: {best_config[0]}")
-    print(f"Goal bias: {best_config[1]}")
-    print(f"Trial number: {best_config[2]}")
-    print(f"Cost: {best_cost}")
-    print("Path saved as 'best_path.npy'")
-    print("Visualization saved as 'best_path_visualization.png'")
 
 def run_dot_2d_rrt_experiment(ext_mode, goal_prob):
    start_time = time.time()
@@ -701,6 +574,127 @@ def run_inspection_comparison():
                 f.write("\n" + "-"*50 + "\n")
     
     return results
+
+def run_3d():
+
+    options = [
+        (0.05,0.05), (0.075,0.05), (0.1,0.05), (0.125,0.05),
+        (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
+        (0.05,0.2), (0.075,0.2), (0.1,0.2), (0.125,0.2),
+        (0.2,0.2), (0.25,0.2), (0.3,0.2), (0.4,0.2)
+    ]
+    
+    best_path = None
+    best_cost = float('inf')
+    best_config = None
+    num_trials = 20
+    
+    # Process one configuration at a time
+    for step, goal in options:
+        print(f"\nProcessing step={step}, goal={goal}")
+        costs = []
+        times = []
+        successes = 0
+        
+        for trial in range(num_trials):
+            print(f"Trial {trial + 1}/{num_trials}")
+            
+            plan, cost, execution_time = run_3d_experiment(step, goal, visualize=False)
+            
+            # Clear matplotlib memory
+            plt.close('all')
+            
+            if plan is not None and len(plan) > 0:
+                costs.append(cost)
+                times.append(execution_time)
+                successes += 1
+                
+                # Update best path if better
+                if cost < best_cost:
+                    best_cost = cost
+                    best_config = (step, goal, trial)
+                    np.save('best_path.npy', plan)
+                    with open('best_path_info.txt', 'w') as f:
+                        f.write(f"Step size: {step}\n")
+                        f.write(f"Goal bias: {goal}\n")
+                        f.write(f"Trial: {trial}\n")
+                        f.write(f"Cost: {cost}\n")
+            
+            # Force garbage collection after each trial
+            if trial % 5 == 0: 
+                gc.collect()
+        
+        if successes > 0:
+            with open('results.txt', 'a') as f:
+                f.write(f"\nResults for step={step}, goal={goal}:\n")
+                f.write(f"Success rate: {(successes/num_trials)*100:.1f}%\n")
+                f.write(f"Average cost: {np.mean(costs):.2f} ± {np.std(costs):.2f}\n")
+                f.write(f"Average time: {np.mean(times):.2f}s ± {np.std(times):.2f}s\n")
+            
+            np.savez(f'config_results_{step}_{goal}.npz',
+                    costs=np.array(costs),
+                    times=np.array(times),
+                    success_rate=(successes/num_trials)*100)
+        
+        # Clear all lists
+        costs.clear()
+        times.clear()
+        gc.collect()
+    
+    plot_results(options)
+
+def plot_results(options):
+    """Create plots from saved configuration results"""
+    # Create separate figures for each p_bias
+    for p_bias in [0.05, 0.2]:
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle(f'Results for p_bias = {p_bias}')
+        
+        step_sizes = []
+        mean_costs = []
+        mean_times = []
+        success_rates = []
+        
+        # Load results for this p_bias
+        for step, goal in options:
+            if goal == p_bias:
+                try:
+                    data = np.load(f'config_results_{step}_{goal}.npz')
+                    step_sizes.append(step)
+                    mean_costs.append(np.mean(data['costs']))
+                    mean_times.append(np.mean(data['times']))
+                    success_rates.append(data['success_rate'])
+                except:
+                    continue
+        
+        # Create plots
+        ax1.plot(mean_times, mean_costs, 'o-')
+        ax1.set_xlabel('Computation Time (s)')
+        ax1.set_ylabel('Path Cost')
+        ax1.set_title('Cost vs Computation Time')
+        ax1.grid(True)
+        
+        ax2.plot(mean_times, success_rates, 'o-')
+        ax2.set_xlabel('Computation Time (s)')
+        ax2.set_ylabel('Success Rate (%)')
+        ax2.set_title('Success Rate vs Computation Time')
+        ax2.grid(True)
+        
+        ax3.plot(step_sizes, mean_costs, 'o-')
+        ax3.set_xlabel('Max Step Size')
+        ax3.set_ylabel('Path Cost')
+        ax3.set_title('Cost vs Max Step Size')
+        ax3.grid(True)
+        
+        ax4.plot(step_sizes, success_rates, 'o-')
+        ax4.set_xlabel('Max Step Size')
+        ax4.set_ylabel('Success Rate (%)')
+        ax4.set_title('Success Rate vs Max Step Size')
+        ax4.grid(True)
+        
+        plt.tight_layout()
+        plt.savefig(f'results_pbias_{int(p_bias*100)}.png')
+        plt.close('all')
 
 if __name__ == "__main__":
     #run_dot_2d_astar()
