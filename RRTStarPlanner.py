@@ -44,6 +44,9 @@ class RRTStarPlanner(object):
             near_idx, xnear = self.tree.get_nearest_config(xrand)
             xnew = self.extend(xnear, xrand)
         
+            if not self.bb.edge_validity_checker_lazy(xnear, xnew):
+                continue
+
             if not self.bb.edge_validity_checker(xnear, xnew):
                 continue
             
@@ -77,6 +80,8 @@ class RRTStarPlanner(object):
             return self.extract_path(best_goal_idx)
             
         return []
+
+    
 
     def rewire(self, potential_parent_idx, child_idx):
         """

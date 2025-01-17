@@ -35,17 +35,15 @@ class BuildingBlocks3D(object):
         :param goal_prob - the probability that goal should be sampled
         """
         # TODO: HW2 5.2.1
-        to_bias = np.random.uniform(low = 0, high = 1)
-        if to_bias <= goal_prob:
+        if np.random.uniform(low=0, high=1) <= goal_prob:
             return goal_conf
-        config = []
-        for joint_limit in self.ur_params.mechamical_limits.values():
-            config.append(np.random.uniform(low = joint_limit[0], high = joint_limit[1]))
+        config = np.array([np.random.uniform(low=joint_limit[0], high=joint_limit[1]) 
+                    for joint_limit in self.ur_params.mechamical_limits.values()])
         return config
 
     def config_validity_checker(self, conf) -> bool:
         """check for collision in given configuration, arm-arm and arm-obstacle
-        return True if in collision
+        return True if is not in collision
         @param conf - some configuration
         """
         # TODO: HW2 5.2.2- Pay attention that function is a little different than in HW2
@@ -91,23 +89,41 @@ class BuildingBlocks3D(object):
         @param current_conf - current configuration
         '''
         # TODO: HW2 5.2.4
-        if not self.config_validity_checker(current_conf) :
-            #print('current conf in collision')
+        if not self.config_validity_checker(current_conf):
             return False
         if not self.config_validity_checker(prev_conf):
-            #print('prev conf in collision')
             return False
         res = self.resolution
-        num_steps = max(3,int(self.compute_distance(prev_conf, current_conf)/res))
-        #print(f'resolution is {res} , and num steps is {num_steps}')
+        num_steps = max(3, int(self.compute_distance(prev_conf, current_conf)/res))
+    
         for i in range(num_steps):
-            t = i/ (num_steps -1)
-
-            temp_conf = [prev_conf[j] + t * (current_conf[j] - prev_conf[j]) for j in range(len(prev_conf))]
+            t = i/(num_steps-1)
+            temp_conf = np.array([prev_conf[j] + t * (current_conf[j] - prev_conf[j]) 
+                            for j in range(len(prev_conf))])
             if not self.config_validity_checker(temp_conf):
-                #print(f'failed at step {i}')
                 return False
-        #print('transition approved!')
+            
+        return True
+
+    def edge_validity_checker_lazy(self, prev_conf, current_conf) -> bool:
+        '''
+        Quick preliminary collision check between two configurations
+        Only checks endpoints and midpoint instead of full resolution
+        @param prev_conf - some configuration
+        @param current_conf - current configuration
+        @return True if the transition might be valid (needs full check), False if definitely invalid
+        '''
+        if not self.config_validity_checker(current_conf):
+            return False
+        if not self.config_validity_checker(prev_conf):
+            return False
+    
+        # Check midpoint
+        temp_conf = np.array([prev_conf[j] + 0.5 * (current_conf[j] - prev_conf[j]) 
+                             for j in range(len(prev_conf))])
+        if not self.config_validity_checker(temp_conf):
+            return False
+    
         return True
 
     def compute_distance(self, conf1, conf2):
