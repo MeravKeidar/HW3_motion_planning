@@ -106,7 +106,7 @@ def run_3d():
     now_3d = time.gmtime()
     with open(f'3d_experiment_results_{now_3d}.txt', 'w') as f:        
         results = {}
-        num_trials = 20
+        num_trials = 1
         
         for step, goal in options:
             key = f"{step}_goal{int(goal*100)}"
@@ -155,7 +155,7 @@ def run_3d_experiment(step, goal):
                             ur_params=ur_params,
                             env=env,
                             resolution=0.1 )
-
+    #print(bb.config_validity_checker(np.deg2rad([130,-70, 90, -90, -90, 0])))
     #visualizer = Visualize_UR(ur_params, env=env, transform=transform, bb=bb)
     rrt_star_planner = RRTStarPlanner(max_step_size=step,
                                         start=env2_start,
