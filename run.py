@@ -19,7 +19,8 @@ import time
 import matplotlib
 import json
 from matplotlib import pyplot as plt
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
+
 
 # MAP_DETAILS = {"json_file": "twoD/map1.json", "start": np.array([10,10]), "goal": np.array([4, 6])}
 MAP_DETAILS = {"json_file": "twoD/map2.json", "start": np.array([360, 150]), "goal": np.array([100, 200])}
@@ -167,10 +168,15 @@ def run_3d_experiment(step, goal, visualize = True):
     start_time = time.time()
     plan = rrt_star_planner.plan()
     execution_time = time.time() - start_time
-    if plan is not None and len(plan) > 0 and visualize:
-        visualizer.show_path(plan)
-        plt.savefig(f"3d_experiment_{step}_{goal*100}%")
-        plt.close()
+    if visualize:
+        if plan is not None and len(plan) > 0:
+            visualizer.show_path(plan)
+            # plt.show()
+            # filename = f"experiment_step_{str(step).replace('.', '_')}_goal_{str(goal).replace('.', '_')}.png"
+            # plt.savefig(filename)
+            # plt.close()
+        else:
+            print("plan failed \n")
     return plan, rrt_star_planner.compute_cost(plan), execution_time
 
 def run_3d():
@@ -185,7 +191,7 @@ def run_3d():
     
     now_3d = time.gmtime()
     results = {}
-    num_trials = 20 
+    num_trials = 20
     
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
     colors = ['blue', 'red']  # One color for each p_bias value
@@ -703,6 +709,7 @@ if __name__ == "__main__":
     #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
     #run_2d_rrt_inspection_planning()
+    # run_3d_experiment(0.75,0.2)
     run_3d()
     #results = run_rrt_experiments()
     #run_rrt_star_experiments()
