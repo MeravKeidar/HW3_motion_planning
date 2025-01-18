@@ -581,74 +581,85 @@ def plot_results(options):
     colors = plt.cm.Set2(np.linspace(0, 1, len(step_sizes)))
     
     for goal_bias in goal_biases:
-        # Create separate figures for cost and success rate
         fig_cost = plt.figure(figsize=(10, 6))
         ax_cost = fig_cost.add_subplot(111)
         
         fig_success = plt.figure(figsize=(10, 6))
         ax_success = fig_success.add_subplot(111)
         
-        # Get max time for this goal bias
-        max_time = 0
+        all_times = []
+        all_costs = []
         for step in step_sizes:
             try:
                 data = np.load(f'config_results_{step}_{goal_bias}.npz')
-                max_time = max(max_time, np.percentile(data['times'], 95))
+                all_times.extend(data['times'])
+                all_costs.extend(data['costs'])
             except FileNotFoundError:
                 continue
-        
+                
+        # Set limits based on actual data ranges
+        min_time = min(all_times)
+        max_time = max(all_times)
+        min_cost = min(all_costs)
+        max_cost = max(all_costs)
+
         for i, step in enumerate(step_sizes):
             try:
                 data = np.load(f'config_results_{step}_{goal_bias}.npz')
                 times = data['times']
                 costs = data['costs']
                 
-                # Sort data by time
                 sort_idx = np.argsort(times)
                 times = times[sort_idx]
                 costs = costs[sort_idx]
                 
                 # Plot scattered points and trend for cost
-                ax_cost.scatter(times, costs, color=colors[i], alpha=0.2, 
-                              s=20, label=f'{step:.3f}')
+                ax_cost.scatter(times, costs, color=colors[i], alpha=0.8, 
+                              s=5, label=f'{step:.3f}')
                 
                 # Compute smoothed trend line
-                if len(times) >= 3:
-                    window = max(len(times) // 3, 3)
-                    kernel = np.ones(window) / window
-                    costs_smooth = np.convolve(costs, kernel, mode='valid')
-                    times_smooth = times[window-1:]
+                
+                window = max(len(times) // 3, 3)
+                kernel = np.ones(window) / window
+                costs_smooth = np.convolve(costs, kernel, mode='valid')
+                times_smooth = times[window-1:]
                     
-                    ax_cost.plot(times_smooth, costs_smooth, color=colors[i], 
+                ax_cost.plot(times_smooth, costs_smooth, color=colors[i], 
                                linewidth=2, alpha=0.8)
                 
                 # Calculate and plot success rate
                 successes = np.arange(1, len(times) + 1)
-                success_rate = (successes / len(times)) * 100
+                success_rates = (successes / len(times)) * 100
                 
-                ax_success.plot(times, success_rate, color=colors[i],
-                              label=f'{step:.3f}', linewidth=2)
+                ax_success.scatter(times, success_rates, color=colors[i], alpha=0.8,
+                                s=5, label=f'{step:.3f}')
+                
+                # Compute smoothed trend line for success rate
+                success_smooth = np.convolve(success_rates, kernel, mode='valid')
+                ax_success.plot(times_smooth, success_smooth, color=colors[i],
+                                  linewidth=2, alpha=0.8)
                 
             except FileNotFoundError:
                 continue
         
-        # Configure cost plot
+        # cost plot
         ax_cost.set_xlabel('Computation Time (s)', fontsize=12)
         ax_cost.set_ylabel('Path Cost', fontsize=12)
         ax_cost.set_title(f'Cost vs Time (Goal Bias = {goal_bias})', fontsize=14)
         ax_cost.grid(True, alpha=0.3)
-        ax_cost.set_xlim(0, max_time * 1.1)
+        ax_cost.set_xlim(min_time, max_time)
+        ax_cost.set_ylim(min_cost, max_cost)
         legend_cost = ax_cost.legend(title='Step Size', 
                                    bbox_to_anchor=(1.05, 1),
                                    loc='upper left')
         legend_cost.get_title().set_fontsize('10')
         
-        # Configure success rate plot
+        # success rate plot
         ax_success.set_xlabel('Computation Time (s)', fontsize=12)
         ax_success.set_ylabel('Success Rate (%)', fontsize=12)
         ax_success.set_title(f'Success Rate vs Time (Goal Bias = {goal_bias})', fontsize=14)
         ax_success.grid(True, alpha=0.3)
-        ax_success.set_xlim(0, max_time * 1.1)
+        ax_success.set_xlim(min_time, max_time)
         ax_success.set_ylim(0, 100)
         legend_success = ax_success.legend(title='Step Size', 
                                          bbox_to_anchor=(1.05, 1),
