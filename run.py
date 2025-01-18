@@ -576,69 +576,94 @@ def run_3d():
     plot_results(options)
 
 def plot_results(options):
-    goal_biases = set(goal for _, goal in options)
+    goal_biases = sorted(set(goal for _, goal in options))
     step_sizes = sorted(set(step for step, _ in options))
+    colors = plt.cm.Set2(np.linspace(0, 1, len(step_sizes)))
     
-    fig, axes = plt.subplots(len(goal_biases), 2, figsize=(15, 10))
-    plt.subplots_adjust(hspace=0.4)
-    
-    colors = plt.cm.viridis(np.linspace(0, 1, len(step_sizes)))
-    
-    for idx, goal_bias in enumerate(sorted(goal_biases)):
-        cost_data = []
-        time_data = []
-        success_rates = []
-
+    for goal_bias in goal_biases:
+        # Create separate figures for cost and success rate
+        fig_cost = plt.figure(figsize=(10, 6))
+        ax_cost = fig_cost.add_subplot(111)
+        
+        fig_success = plt.figure(figsize=(10, 6))
+        ax_success = fig_success.add_subplot(111)
+        
+        # Get max time for this goal bias
+        max_time = 0
         for step in step_sizes:
             try:
                 data = np.load(f'config_results_{step}_{goal_bias}.npz')
-                cost_data.append(data['costs'])
-                time_data.append(data['times'])
-                success_rates.append(data['success_rate'])
+                max_time = max(max_time, np.percentile(data['times'], 95))
             except FileNotFoundError:
-                print(f"Warning: No data found for step={step}, goal={goal_bias}")
                 continue
         
-        # costs vs time
         for i, step in enumerate(step_sizes):
-            if i < len(cost_data): 
-                axes[idx, 0].scatter(time_data[i], cost_data[i], 
-                                   color=colors[i], alpha=0.5,
-                                   label=f'Step {step}')
+            try:
+                data = np.load(f'config_results_{step}_{goal_bias}.npz')
+                times = data['times']
+                costs = data['costs']
                 
-                z = np.polyfit(time_data[i], cost_data[i], 1)
-                p = np.poly1d(z)
-                axes[idx, 0].plot(time_data[i], p(time_data[i]), 
-                                color=colors[i], linestyle='--', alpha=0.8)
-        
-        axes[idx, 0].set_xlabel('Computation Time (s)')
-        axes[idx, 0].set_ylabel('Cost')
-        axes[idx, 0].set_title(f'Cost vs Time (Goal Bias = {goal_bias})')
-        axes[idx, 0].grid(True, alpha=0.3)
-        axes[idx, 0].legend()
-        
-        # success rate vs time
-        for i, step in enumerate(step_sizes):
-            if i < len(time_data): 
-                time_windows = np.linspace(min(time_data[i]), max(time_data[i]), 10)
-                success_over_time = []
+                # Sort data by time
+                sort_idx = np.argsort(times)
+                times = times[sort_idx]
+                costs = costs[sort_idx]
                 
-                for t in time_windows:
-                    successes = np.sum(time_data[i] <= t)
-                    rate = (successes / len(time_data[i])) * 100
-                    success_over_time.append(rate)
+                # Plot scattered points and trend for cost
+                ax_cost.scatter(times, costs, color=colors[i], alpha=0.2, 
+                              s=20, label=f'{step:.3f}')
                 
-                axes[idx, 1].plot(time_windows, success_over_time,
-                                color=colors[i], label=f'Step {step}')
+                # Compute smoothed trend line
+                if len(times) >= 3:
+                    window = max(len(times) // 3, 3)
+                    kernel = np.ones(window) / window
+                    costs_smooth = np.convolve(costs, kernel, mode='valid')
+                    times_smooth = times[window-1:]
+                    
+                    ax_cost.plot(times_smooth, costs_smooth, color=colors[i], 
+                               linewidth=2, alpha=0.8)
+                
+                # Calculate and plot success rate
+                successes = np.arange(1, len(times) + 1)
+                success_rate = (successes / len(times)) * 100
+                
+                ax_success.plot(times, success_rate, color=colors[i],
+                              label=f'{step:.3f}', linewidth=2)
+                
+            except FileNotFoundError:
+                continue
         
-        axes[idx, 1].set_xlabel('Computation Time (s)')
-        axes[idx, 1].set_ylabel('Success Rate (%)')
-        axes[idx, 1].set_title(f'Success Rate vs Time (Goal Bias = {goal_bias})')
-        axes[idx, 1].grid(True, alpha=0.3)
-        axes[idx, 1].legend()
-    
-    plt.savefig('performance_results.png', dpi=300, bbox_inches='tight')
-    plt.close()
+        # Configure cost plot
+        ax_cost.set_xlabel('Computation Time (s)', fontsize=12)
+        ax_cost.set_ylabel('Path Cost', fontsize=12)
+        ax_cost.set_title(f'Cost vs Time (Goal Bias = {goal_bias})', fontsize=14)
+        ax_cost.grid(True, alpha=0.3)
+        ax_cost.set_xlim(0, max_time * 1.1)
+        legend_cost = ax_cost.legend(title='Step Size', 
+                                   bbox_to_anchor=(1.05, 1),
+                                   loc='upper left')
+        legend_cost.get_title().set_fontsize('10')
+        
+        # Configure success rate plot
+        ax_success.set_xlabel('Computation Time (s)', fontsize=12)
+        ax_success.set_ylabel('Success Rate (%)', fontsize=12)
+        ax_success.set_title(f'Success Rate vs Time (Goal Bias = {goal_bias})', fontsize=14)
+        ax_success.grid(True, alpha=0.3)
+        ax_success.set_xlim(0, max_time * 1.1)
+        ax_success.set_ylim(0, 100)
+        legend_success = ax_success.legend(title='Step Size', 
+                                         bbox_to_anchor=(1.05, 1),
+                                         loc='upper left')
+        legend_success.get_title().set_fontsize('10')
+        
+        # Save figures
+        fig_cost.tight_layout()
+        fig_success.tight_layout()
+        
+        fig_cost.savefig(f'cost_pbias_{goal_bias}.png', dpi=300, bbox_inches='tight')
+        fig_success.savefig(f'success_pbias_{goal_bias}.png', dpi=300, bbox_inches='tight')
+        
+        plt.close(fig_cost)
+        plt.close(fig_success)
 
 if __name__ == "__main__":
     #run_dot_2d_astar()
@@ -648,7 +673,12 @@ if __name__ == "__main__":
     # analyze_rrt_performance()
     #run_2d_rrt_inspection_planning()
     # run_3d_experiment(0.75,0.2, True)
-    run_3d()
+    plot_results([
+        (0.05,0.05), (0.075,0.05), (0.1,0.05), (0.125,0.05),
+        (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
+        (0.05,0.2), (0.075,0.2), (0.1,0.2), (0.125,0.2),
+        (0.2,0.2), (0.25,0.2), (0.3,0.2), (0.4,0.2)
+    ])
     #results = run_rrt_experiments()
     #run_rrt_star_experiments()
     #run_inspection_comparison()
