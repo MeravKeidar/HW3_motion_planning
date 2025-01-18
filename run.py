@@ -97,7 +97,7 @@ def run_3d_experiment(step, goal, visualize = True):
                                         start=env2_start,
                                         goal=env2_goal,
                                         max_itr=2000,
-                                        stop_on_goal=True,
+                                        stop_on_goal=False,
                                         bb=bb,
                                         goal_prob=goal,
                                         ext_mode="E2")
@@ -108,10 +108,6 @@ def run_3d_experiment(step, goal, visualize = True):
     if visualize:
         if plan is not None and len(plan) > 0:
             visualizer.show_path(plan)
-            # plt.show()
-            # filename = f"experiment_step_{str(step).replace('.', '_')}_goal_{str(goal).replace('.', '_')}.png"
-            # plt.savefig(filename)
-            # plt.close()
         else:
             print("plan failed \n")
     return plan, rrt_star_planner.compute_cost(plan), execution_time
@@ -521,6 +517,7 @@ def run_3d():
     
     best_path = None
     best_cost = float('inf')
+
     best_config = None
     num_trials = 20
     
@@ -579,57 +576,69 @@ def run_3d():
     plot_results(options)
 
 def plot_results(options):
-    """Create plots from saved configuration results"""
-    # Create separate figures for each p_bias
-    for p_bias in [0.05, 0.2]:
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle(f'Results for p_bias = {p_bias}')
-        
-        step_sizes = []
-        mean_costs = []
-        mean_times = []
+    goal_biases = set(goal for _, goal in options)
+    step_sizes = sorted(set(step for step, _ in options))
+    
+    fig, axes = plt.subplots(len(goal_biases), 2, figsize=(15, 10))
+    plt.subplots_adjust(hspace=0.4)
+    
+    colors = plt.cm.viridis(np.linspace(0, 1, len(step_sizes)))
+    
+    for idx, goal_bias in enumerate(sorted(goal_biases)):
+        cost_data = []
+        time_data = []
         success_rates = []
+
+        for step in step_sizes:
+            try:
+                data = np.load(f'config_results_{step}_{goal_bias}.npz')
+                cost_data.append(data['costs'])
+                time_data.append(data['times'])
+                success_rates.append(data['success_rate'])
+            except FileNotFoundError:
+                print(f"Warning: No data found for step={step}, goal={goal_bias}")
+                continue
         
-        # Load results for this p_bias
-        for step, goal in options:
-            if goal == p_bias:
-                try:
-                    data = np.load(f'config_results_{step}_{goal}.npz')
-                    step_sizes.append(step)
-                    mean_costs.append(np.mean(data['costs']))
-                    mean_times.append(np.mean(data['times']))
-                    success_rates.append(data['success_rate'])
-                except:
-                    continue
+        # costs vs time
+        for i, step in enumerate(step_sizes):
+            if i < len(cost_data): 
+                axes[idx, 0].scatter(time_data[i], cost_data[i], 
+                                   color=colors[i], alpha=0.5,
+                                   label=f'Step {step}')
+                
+                z = np.polyfit(time_data[i], cost_data[i], 1)
+                p = np.poly1d(z)
+                axes[idx, 0].plot(time_data[i], p(time_data[i]), 
+                                color=colors[i], linestyle='--', alpha=0.8)
         
-        # Create plots
-        ax1.plot(mean_times, mean_costs, 'o-')
-        ax1.set_xlabel('Computation Time (s)')
-        ax1.set_ylabel('Path Cost')
-        ax1.set_title('Cost vs Computation Time')
-        ax1.grid(True)
+        axes[idx, 0].set_xlabel('Computation Time (s)')
+        axes[idx, 0].set_ylabel('Cost')
+        axes[idx, 0].set_title(f'Cost vs Time (Goal Bias = {goal_bias})')
+        axes[idx, 0].grid(True, alpha=0.3)
+        axes[idx, 0].legend()
         
-        ax2.plot(mean_times, success_rates, 'o-')
-        ax2.set_xlabel('Computation Time (s)')
-        ax2.set_ylabel('Success Rate (%)')
-        ax2.set_title('Success Rate vs Computation Time')
-        ax2.grid(True)
+        # success rate vs time
+        for i, step in enumerate(step_sizes):
+            if i < len(time_data): 
+                time_windows = np.linspace(min(time_data[i]), max(time_data[i]), 10)
+                success_over_time = []
+                
+                for t in time_windows:
+                    successes = np.sum(time_data[i] <= t)
+                    rate = (successes / len(time_data[i])) * 100
+                    success_over_time.append(rate)
+                
+                axes[idx, 1].plot(time_windows, success_over_time,
+                                color=colors[i], label=f'Step {step}')
         
-        ax3.plot(step_sizes, mean_costs, 'o-')
-        ax3.set_xlabel('Max Step Size')
-        ax3.set_ylabel('Path Cost')
-        ax3.set_title('Cost vs Max Step Size')
-        ax3.grid(True)
-        
-        ax4.plot(step_sizes, success_rates, 'o-')
-        ax4.set_xlabel('Max Step Size')
-        ax4.set_ylabel('Success Rate (%)')
-        ax4.set_title('Success Rate vs Max Step Size')
-        ax4.grid(True)
-        
-        plt.tight_layout()
-        plt.savefig(f'results_pbias_{int(p_bias*100)}.png')
-        plt.close('all')
+        axes[idx, 1].set_xlabel('Computation Time (s)')
+        axes[idx, 1].set_ylabel('Success Rate (%)')
+        axes[idx, 1].set_title(f'Success Rate vs Time (Goal Bias = {goal_bias})')
+        axes[idx, 1].grid(True, alpha=0.3)
+        axes[idx, 1].legend()
+    
+    plt.savefig('performance_results.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
 if __name__ == "__main__":
     #run_dot_2d_astar()
@@ -638,8 +647,8 @@ if __name__ == "__main__":
     #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
     #run_2d_rrt_inspection_planning()
-    run_3d_experiment(0.75,0.2, True)
-    # run_3d()
+    # run_3d_experiment(0.75,0.2, True)
+    run_3d()
     #results = run_rrt_experiments()
     #run_rrt_star_experiments()
     #run_inspection_comparison()
