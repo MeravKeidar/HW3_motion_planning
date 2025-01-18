@@ -80,70 +80,6 @@ def run_dot_2d_rrt_star():
     # execute plan
     plan = planner.plan()
     DotVisualizer(bb).visualize_map(plan=plan, tree_edges=planner.tree.get_edges_as_states(), show_map=False)
-
-# def run_3d():
-    options = [
-        # (0.05,0.05),
-        # (0.075,0.05),
-        # (0.1,0.05),
-        # (0.125,0.05),
-        # (0.2,0.05),
-        # (0.25,0.05),
-        # (0.3,0.05),
-        # (0.4,0.05),
-        # (0.05,0.2),
-        # (0.075,0.2),
-        # (0.1,0.2),
-        # (0.125,0.2),
-        # (0.2,0.2),
-        # (0.25,0.2),
-        # (0.3,0.2),
-        (0.4,0.2)
-    ]
-    # --------- configurations-------------
-    env2_start = np.deg2rad([110, -70, 90, -90, -90, 0 ])
-    env2_goal = np.deg2rad([50, -80, 90, -90, -90, 0 ])
-    # ---------------------------------------
-    now_3d = time.gmtime()
-    with open(f'3d_experiment_results.txt', 'w') as f:        
-        results = {}
-        num_trials = 5
-        
-        for step, goal in options:
-            key = f"{step}_goal{int(goal*100)}"
-            costs = []
-            times = []
-            successes = 0 
-            
-            f.write(f"\nRunning {num_trials} trials for {step} step size with {goal*100}% goal bias\n")
-            
-            for trial in range(num_trials):
-                print(f"Trial {trial + 1}/{num_trials}")
-                visualize = False
-                if trial == 0:
-                    visualize=True
-                plan, cost, execution_time = run_3d_experiment(step,goal,visualize)
-                if plan is not None and len(plan) > 0:
-                    costs.append(cost)
-                    times.append(execution_time)
-                    successes +=1
-            success_rate = (successes / num_trials) * 100
-            if successes > 0: 
-                results[key] = {
-                    'mean_cost': np.mean(costs),
-                    'std_cost': np.std(costs),
-                    'mean_time': np.mean(times),
-                    'std_time': np.std(times),
-                    'success_rate': success_rate
-                }
-                
-                f.write(f"\nResults for {key}:\n")
-                f.write(f"Success Rate: {success_rate:.1f}%\n")
-                f.write(f"Average Cost: {results[key]['mean_cost']:.2f} ± {results[key]['std_cost']:.2f}\n")
-                f.write(f"Average Time: {results[key]['mean_time']:.2f}s ± {results[key]['std_time']:.2f}s\n")
-            else:
-                f.write(f"\nResults for {key}:\n")
-                f.write("No successful trials\n")
     
 def run_3d_experiment(step, goal, visualize = True):
     env2_start = np.deg2rad([110, -70, 90, -90, -90, 0 ])
@@ -462,10 +398,10 @@ def run_inspection_comparison():
     
     # All combinations of methods
     methods = {
-        'original_regular': {'planner': 'plan', 'sampling': 'regular'},
-        'original_ik': {'planner': 'plan', 'sampling': 'ik'},
-        'optimized_regular': {'planner': 'optimized_plan', 'sampling': 'regular'},
-        'optimized_ik': {'planner': 'optimized_plan', 'sampling': 'ik'}
+        'original_regular': {'planner': 'non_optimized_plan', 'sampling': 'regular'},
+        'original_ik': {'planner': 'non_optimized_plan', 'sampling': 'ik'},
+        'optimized_regular': {'planner': 'plan', 'sampling': 'regular'},
+        'optimized_ik': {'planner': 'plan', 'sampling': 'ik'}
     }
     
     results = {method: {} for method in methods.keys()}
@@ -576,7 +512,6 @@ def run_inspection_comparison():
     return results
 
 def run_3d():
-
     options = [
         (0.05,0.05), (0.075,0.05), (0.1,0.05), (0.125,0.05),
         (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
@@ -703,8 +638,8 @@ if __name__ == "__main__":
     #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
     #run_2d_rrt_inspection_planning()
-    # run_3d_experiment(0.75,0.2)
-    run_3d()
+    run_3d_experiment(0.75,0.2, True)
+    # run_3d()
     #results = run_rrt_experiments()
     #run_rrt_star_experiments()
     #run_inspection_comparison()

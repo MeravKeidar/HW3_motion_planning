@@ -25,7 +25,7 @@ class RRTInspectionPlanner(object):
         y_range = bb.env.ylimit[1] - bb.env.ylimit[0]
         self.eta = 0.03 * np.sqrt(x_range**2 + y_range**2) 
 
-    def plan(self):
+    def non_optimized_plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
@@ -143,7 +143,7 @@ class RRTInspectionPlanner(object):
             self.tree.edges.pop(vid)
             
     
-    def optimized_plan(self):
+    def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states 
         in the configuration space. Uses lazy collision checking and efficient point tracking.
