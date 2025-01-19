@@ -1,0 +1,4 @@
+Step size: 0.05
+Goal bias: 0.05
+Trial: 11
+Cost: 0.8552640877222702
