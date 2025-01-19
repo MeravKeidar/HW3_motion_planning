@@ -30,6 +30,9 @@ class RRTStarPlanner(object):
         self.path_cost = float('inf')
         self.num_vertices = 0
 
+        self.path_costs_history = [] 
+        self.path_times_history = []
+
     def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states (positions) of the robot.
@@ -67,9 +70,12 @@ class RRTStarPlanner(object):
                 
             if np.allclose(xnew, self.goal, atol=1e-3):
                 current_cost = self.tree.vertices[new_idx].cost
+                current_time = time.time() - start_time
                 if current_cost < best_goal_cost:
                     best_goal_idx = new_idx
                     best_goal_cost = current_cost
+                    self.path_costs_history.append(current_cost)
+                    self.path_times_history.append(current_time)
                     if self.stop_on_goal:
                         break
                     
@@ -80,8 +86,6 @@ class RRTStarPlanner(object):
             return self.extract_path(best_goal_idx)
             
         return []
-
-    
 
     def rewire(self, potential_parent_idx, child_idx):
         """
@@ -101,7 +105,7 @@ class RRTStarPlanner(object):
             # Rewire if new path is better
             self.tree.edges[child_idx] = potential_parent_idx
             self.tree.vertices[child_idx].set_cost(new_cost)
-            self.tree.update_subtree_costs(child_idx)
+            # self.tree.update_subtree_costs(child_idx)
             return True
         return False
 

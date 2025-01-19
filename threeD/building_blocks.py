@@ -50,34 +50,31 @@ class BuildingBlocks3D(object):
         coords = self.transform.conf2sphere_coords(conf)
         radii = self.ur_params.sphere_radius
         obstacle_rad = self.env.radius
+
         for joint,values in coords.items():
             for center in values:
-                if center[0] >= 0.4: #wall in manipulator env, HW3 relevant
+                if center[0] + radii[joint] >= 0.4: #wall in manipulator env, HW3 relevant
                     return False
                 if center[0] !=0 and center[1] != 0 and center[2] < radii[joint]:
-                    #print(f'{joint} hit floor at {center}, dist should be more than {radii[joint]}')
                     return False
+                
                 for obstacle in self.env.obstacles:
                     obstacle_dist = np.sqrt(np.sum((center - obstacle)**2))
                     rad_sum = radii[joint] + obstacle_rad
                     if  obstacle_dist < rad_sum:
-                        #print(f'{joint} is {coords[joint]} ')
-                        #print(f'center is {center} , obstacle is {obstacle} , distance is {obstacle_dist} , should be more than {rad_sum}')
                         return False
+                    
         for collision in self.possible_link_collisions:
             joint1 = collision[0]
             joint2 = collision[1]
             rad_sum = radii[joint1] +  radii[joint2]
             joint1_centers = coords[joint1]
             joint2_centers = coords[joint2]
-            for i in range(len(joint1_centers)):
-                for j in range(i+1,len(joint2_centers)):
-                    center1 = joint1_centers[i]
-                    center2 = joint2_centers[j]
+
+            for center1 in joint1_centers:
+                for center2 in joint2_centers:
                     actual_distance = np.sqrt(np.sum((center1 - center2)**2))
-                    if  actual_distance < rad_sum:
-                        #print(f'{joint1} is {joint1_centers} and {joint2} is {joint2_centers}')
-                        #print(f'center 1 is {center1} , center2 is {center2} , distance is {actual_distance} , should be more than {rad_sum}')
+                    if actual_distance < rad_sum:
                         return False
                             
         return True
