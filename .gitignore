@@ -5060,3 +5060,8 @@ rrt_tree_E1.png
 rrt_tree_E2.png
 3d_experiment_results.txt
 best_path.npy
+best_path_overall.npy
+experiment_results.npy
+path_cost_bias_0.05.png
+success_rate_time_bias_0.05.png
+success_rate_time_bias_0.2.png

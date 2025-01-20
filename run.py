@@ -579,11 +579,10 @@ def run_3d_experiment(step, goal, visualize = True):
 def run_3d_experiment_suite(num_trials=20):
     configs_by_bias = defaultdict(list)
     options = [
-        (0.05,0.05), (0.4,0.2)
-        # ,(0.075,0.05), (0.1,0.05), (0.125,0.05),
-        # (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
-        # (0.05,0.2), (0.075,0.2), (0.1,0.2), (0.125,0.2),
-        # (0.2,0.2), (0.25,0.2), (0.3,0.2), (0.4,0.2)
+        (0.05,0.05), ,(0.075,0.05), (0.1,0.05), (0.125,0.05),
+        (0.2,0.05), (0.25,0.05), (0.3,0.05), (0.4,0.05),
+        (0.05,0.2), (0.075,0.2), (0.1,0.2), (0.125,0.2),
+        (0.2,0.2), (0.25,0.2), (0.3,0.2), (0.4,0.2)
     ]
     
     for step, bias in options:
@@ -706,10 +705,14 @@ def plot_results():
         for i, step in enumerate(step_sizes):
             path_costs = results[(step, bias)]['path_costs']
             path_times = results[(step, bias)]['path_times']
-            plt.plot(path_times, path_costs, color=colors[i],label=f'Step={step}', linestyle='-',
-                            linewidth=2)
+            if path_times and path_costs:
+                sorted_indices = np.argsort(path_times)
+                sorted_times = np.array(path_times)[sorted_indices]
+                sorted_costs = np.array(path_costs)[sorted_indices]
+                
+                plt.plot(sorted_times, sorted_costs, color=colors[i],
+                        label=f'Step={step}', linestyle='-', linewidth=2)
                  
-        
         plt.xlabel('Time (s)')
         plt.ylabel('Path Cost')
         plt.title(f'Path Cost vs Time (Goal Bias={bias})')
@@ -768,6 +771,7 @@ if __name__ == "__main__":
     # run_dot_2d_rrt_star()
     #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
+    run_3d_experiment_suite(20)
     #run_2d_rrt_inspection_planning()
     # run_3d_experiment(0.75,0.2, True)
     #results = run_rrt_experiments()
