@@ -105,7 +105,7 @@ class RRTStarPlanner(object):
             # Rewire if new path is better
             self.tree.edges[child_idx] = potential_parent_idx
             self.tree.vertices[child_idx].set_cost(new_cost)
-            # self.tree.update_subtree_costs(child_idx)
+            self.tree.update_subtree_costs(child_idx)
             return True
         return False
 
