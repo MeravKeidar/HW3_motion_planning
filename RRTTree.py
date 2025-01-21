@@ -117,14 +117,27 @@ class RRTTree(object):
     def update_subtree_costs(self, root_idx):
         '''
         Update costs of all descendants of the given vertex.
+        Uses BFS to ensure parent costs are updated before children.
         '''
-        children = [idx for idx, parent_idx in self.edges.items() if parent_idx == root_idx]
+        to_visit = [root_idx]
+        visited = set()
+        while to_visit:
+            current_idx = to_visit.pop(0)
+            if current_idx in visited:
+                continue
+            visited.add(current_idx)
+            # all children of current node
+            children = [idx for idx, parent_idx in self.edges.items() if parent_idx == current_idx]
 
-        for child_idx in children:
-            edge_cost = self.bb.compute_distance(self.vertices[root_idx].config, 
-                                               self.vertices[child_idx].config)
-            self.vertices[child_idx].set_cost(self.vertices[root_idx].cost + edge_cost)
-            self.update_subtree_costs(child_idx)
+            for child_idx in children:
+                parent_config = self.vertices[current_idx].config
+                child_config = self.vertices[child_idx].config
+                edge_cost = self.bb.compute_distance(parent_config, child_config)
+                self.vertices[child_idx].set_cost(self.vertices[current_idx].cost + edge_cost)
+                # Add child to queue for processing
+                if child_idx not in visited:
+                    to_visit.append(child_idx)
+
         
 class RRTVertex(object):
 

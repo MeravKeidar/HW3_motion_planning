@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from mpl_toolkits.mplot3d import Axes3D
+import imageio
+import io
 
 
 class Visualize_UR(object):
@@ -63,16 +65,47 @@ class Visualize_UR(object):
             self.end_effector_pos =np.vstack((self.end_effector_pos, np.append(global_sphere_coords['wrist_3_link'][-1], 1)))
             self.ax.scatter(self.end_effector_pos[:,0], self.end_effector_pos[:,1], self.end_effector_pos[:,2])
     
-    def show_path(self, path):
+    def show_path(self, path, output_file='robot_path.gif', fps=3):
         '''
-        Plots the path
+        Creates a GIF of the robot's path
+        
+        Parameters:
+        path: array of configurations
+        output_file: string, path to save the output GIF
+        fps: int, frames per second for the output GIF
         '''
+        frames = []
+        
         for conf in path:
+            self.ax.clear()
+            # Draw the current configuration
             global_sphere_coords = self.transform.conf2sphere_coords(conf)
-            self.draw_spheres(global_sphere_coords,  track_end_effector=True)
+            self.draw_spheres(global_sphere_coords, track_end_effector=True)
             self.show()
-            time.sleep(0.3)
-            self.ax.axes.clear()
+            
+            # Convert plot to image
+            buf = io.BytesIO()
+            self.fig.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+
+            # Read the image and append to frames
+            frames.append(imageio.imread(buf))
+            buf.close()
+        
+        # Save the frames as a GIF
+        imageio.mimsave(output_file, frames, fps=fps)
+        print(f"GIF saved as {output_file}")
+
+    # def show_path(self, path):
+        # '''
+        # Plots the path
+        # '''
+        # for conf in path:
+        #     global_sphere_coords = self.transform.conf2sphere_coords(conf)
+        #     self.draw_spheres(global_sphere_coords,  track_end_effector=True)
+        #     self.show()
+        #     time.sleep(0.3)
+        #     self.ax.axes.clear()
     
     def show_conf(self, conf:np.array):
         '''

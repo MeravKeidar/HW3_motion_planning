@@ -53,13 +53,13 @@ class BuildingBlocks3D(object):
 
         for joint,values in coords.items():
             for center in values:
-                if center[0] + radii[joint] >= 0.4: #wall in manipulator env, HW3 relevant
+                if center[0] + radii[joint] >=0.4: #wall in manipulator env, HW3 relevant
                     return False
                 if center[0] !=0 and center[1] != 0 and center[2] < radii[joint]:
                     return False
                 
                 for obstacle in self.env.obstacles:
-                    obstacle_dist = np.sqrt(np.sum((center - obstacle)**2))
+                    obstacle_dist = np.linalg.norm(center - obstacle)
                     rad_sum = radii[joint] + obstacle_rad
                     if  obstacle_dist < rad_sum:
                         return False
@@ -73,7 +73,7 @@ class BuildingBlocks3D(object):
 
             for center1 in joint1_centers:
                 for center2 in joint2_centers:
-                    actual_distance = np.sqrt(np.sum((center1 - center2)**2))
+                    actual_distance = np.linalg.norm(center1 - center2)
                     if actual_distance < rad_sum:
                         return False
                             
@@ -90,16 +90,17 @@ class BuildingBlocks3D(object):
             return False
         if not self.config_validity_checker(prev_conf):
             return False
+        
         res = self.resolution
-        num_steps = max(3, int(self.compute_distance(prev_conf, current_conf)/res))
-    
-        for i in range(num_steps):
-            t = i/(num_steps-1)
-            temp_conf = np.array([prev_conf[j] + t * (current_conf[j] - prev_conf[j]) 
-                            for j in range(len(prev_conf))])
+        max_joint_diff = np.max(np.abs(current_conf - prev_conf))
+        num_steps = max(3, (int(max_joint_diff / res)+1))
+        temp_conf = np.copy(prev_conf)
+        for step in range(1, num_steps-1):
+            t = step / (num_steps - 1)
+            temp_conf = prev_conf + t * (current_conf - prev_conf)
             if not self.config_validity_checker(temp_conf):
                 return False
-            
+
         return True
 
     def edge_validity_checker_lazy(self, prev_conf, current_conf) -> bool:
@@ -116,8 +117,8 @@ class BuildingBlocks3D(object):
             return False
     
         # Check midpoint
-        temp_conf = np.array([prev_conf[j] + 0.5 * (current_conf[j] - prev_conf[j]) 
-                             for j in range(len(prev_conf))])
+        temp_conf = np.copy(prev_conf)
+        temp_conf += 0.5 * (current_conf - prev_conf)
         if not self.config_validity_checker(temp_conf):
             return False
     
