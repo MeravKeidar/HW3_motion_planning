@@ -736,15 +736,26 @@ def plot_results():
             for t in time_bins:
                 costs_at_t = []
                 for history in all_histories:
+                    # For each trial, find the minimum non-zero cost up to this time
+                    valid_entries = [(time, cost) for time, cost in history if time <= t and cost > 0]
                     # Find the cost at or just before this time
-                    valid_entries = [(time, cost) for time, cost in history if time <= t]
+                    valid_entries = [(time, cost) for time, cost in history if time <= t and cost > 0] 
                     if valid_entries:
                         costs_at_t.append(valid_entries[-1][1])
                 if costs_at_t:
                     avg_costs.append(np.mean(costs_at_t))
                 else:
                     avg_costs.append(float('inf'))
-            
+
+            # Only plot finite values
+            valid_indices = np.isfinite(avg_costs)
+            valid_times = time_bins[valid_indices]
+            valid_costs = np.array(avg_costs)[valid_indices]
+             
+            if len(valid_times) > 0:
+                plt.plot(valid_times, valid_costs, color=step_to_color[step], 
+                        label=f'Step size: {step}')
+               
             plt.plot(time_bins, avg_costs, color=step_to_color[step], 
                     label=f'Step size: {step}')
             

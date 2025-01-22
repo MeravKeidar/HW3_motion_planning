@@ -69,13 +69,11 @@ class RRTStarPlanner(object):
             current_cost = self.tree.vertices[new_idx].cost
             current_time = time.time() - start_time
             if (i % 10 == 0):
-                self.path_history.append((current_time, current_cost))
+                self.path_history.append((current_time, best_goal_cost))
 
             if np.allclose(xnew, self.goal, atol=1e-3, rtol=1e-3):
                 if not self.bb.edge_validity_checker(xnew, self.goal):
                     break
-                if not self.first_success:
-                    self.first_success = current_time
                 if current_cost < best_goal_cost:
                     best_goal_idx = new_idx
                     best_goal_cost = current_cost
