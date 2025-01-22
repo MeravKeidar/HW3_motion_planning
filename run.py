@@ -681,34 +681,37 @@ def plot_results():
         step_sizes_by_bias[bias].sort()
     
     bias_values = [0.05, 0.2]  
+    common_times = np.arange(0, 60.5, 0.5)
+    
     for bias in bias_values:
         step_sizes = step_sizes_by_bias[bias]
         colors = cm.rainbow(np.linspace(0, 1, len(step_sizes)))
         step_to_color = dict(zip(step_sizes, colors))
         
-        # success rate vs time
         plt.figure(figsize=(10, 6))
         for step in step_sizes:
-            success_times = []
-            for trial in range(num_trials):
-                history = results[(step, bias, trial)]['path_history']
-                if history:
-                    first_success_time = history[0][0]  # Get time from first (time, cost) tuple
-                    success_times.append(first_success_time)
-                else:
-                    continue
-            # Create time points for plotting
-            if success_times:
-                max_time = max(success_times)
-                time_points = np.linspace(0, max_time, 100)
-                success_rates = []
-                # Calculate success rate at each time point
-                for t in time_points:
-                    successes = sum(1 for success_time in success_times if success_time <= t)
-                    success_rates.append(successes / num_trials)
-
-                plt.plot(time_points, success_rates, color=step_to_color[step], 
-                        label=f'Step size: {step}')
+            histories = [results[(step, bias, trial)]['path_history'] for trial in range(num_trials)]
+            success_rates = []
+            
+            # For each time point in common grid
+            for t in common_times:
+                # Find success rate at this time
+                successes = 0
+                for h in histories:
+                    # Find last recorded state before or at this time
+                    for i in range(len(h)):
+                        if h[i][0] > t:
+                            if i > 0 and h[i-1][1] != float('inf'):
+                                successes += 1
+                            break
+                        elif i == len(h)-1 and h[i][1] != float('inf'):  # Last point
+                            successes += 1
+                
+                success_rates.append(successes / num_trials)
+            
+            plt.plot(common_times, success_rates, label=f'step={step}', color=step_to_color[step])
+        
+        
         
         plt.xlabel('Time (s)')
         plt.ylabel('Success Rate')
@@ -718,57 +721,11 @@ def plot_results():
         plt.savefig(f'success_rate_pbias_{bias}.png')
         plt.close()
         
-        #  average cost vs time
+        # average cost vs time
         plt.figure(figsize=(10, 6))
         for step in step_sizes:
-            all_histories = [results[(step, bias, trial)]['path_history'] 
-                           for trial in range(num_trials)]
-            # time bins
-            all_times = [t for history in all_histories for t, _ in history]
-            if not all_times:
-                continue
-            
-            max_time = max(all_times)
-            time_bins = np.linspace(0, max_time, 50)
-            avg_costs = []
-
-            # average cost for each time bin
-            for t in time_bins:
-                costs_at_t = []
-                for history in all_histories:
-                    # For each trial, find the minimum non-zero cost up to this time
-                    valid_entries = [(time, cost) for time, cost in history if time <= t and cost > 0]
-                    # Find the cost at or just before this time
-                    valid_entries = [(time, cost) for time, cost in history if time <= t and cost > 0] 
-                    if valid_entries:
-                        costs_at_t.append(valid_entries[-1][1])
-                if costs_at_t:
-                    avg_costs.append(np.mean(costs_at_t))
-                else:
-                    avg_costs.append(float('inf'))
-
-            # Only plot finite values
-            valid_indices = np.isfinite(avg_costs)
-            valid_times = time_bins[valid_indices]
-            valid_costs = np.array(avg_costs)[valid_indices]
-             
-            if len(valid_times) > 0:
-                plt.plot(valid_times, valid_costs, color=step_to_color[step], 
-                        label=f'Step size: {step}')
-               
-            plt.plot(time_bins, avg_costs, color=step_to_color[step], 
-                    label=f'Step size: {step}')
-            
-            valid_indices = np.isfinite(avg_costs)
-            if np.any(valid_indices):
-                valid_times = time_bins[valid_indices]
-                valid_costs = np.array(avg_costs)[valid_indices]
-                if len(valid_times) > 1:
-                    z = np.polyfit(valid_times, valid_costs, 1)
-                    p = np.poly1d(z)
-                    plt.plot(valid_times, p(valid_times), '--', 
-                            color=step_to_color[step], alpha=0.3,
-                            label=f'Trend (step={step})')
+            # TODO: ADD plotting functioin
+            pass
         
         plt.xlabel('Time (s)')
         plt.ylabel('Average Cost')
@@ -828,9 +785,9 @@ if __name__ == "__main__":
     # run_dot_2d_rrt_star()
     #run_2d_rrt_motion_planning()
     # analyze_rrt_performance()
-    run_3d_experiment_suite(20)
+    # run_3d_experiment_suite(20)
     
-    # plot_results()
+    plot_results()
     # save_average_results()
     #run_2d_rrt_inspection_planning()
     # run_3d_experiment(0.75,0.2, True)
