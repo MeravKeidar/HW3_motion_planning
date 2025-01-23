@@ -724,8 +724,22 @@ def plot_results():
         # average cost vs time
         plt.figure(figsize=(10, 6))
         for step in step_sizes:
-            # TODO: ADD plotting functioin
-            pass
+            histories = [results[(step, bias, trial)]['path_history'] for trial in range(num_trials)]            
+            costs = []
+            for t in common_times:
+                cost = float('inf')
+                for h in histories:
+                    # Find last recorded state before or at this time
+                    for i in range(len(h)):
+                        if h[i][0] > t:
+                            if i > 0 and h[i-1][1] != float('inf'):
+                                cost = min(h[i-1][1],cost)
+                            break
+                        elif i == len(h)-1 and h[i][1] != float('inf'):  # Last point
+                            cost = min(h[i][1],cost)
+                costs.append(cost)
+            
+            plt.plot(common_times, costs, label=f'step={step}', color=step_to_color[step])
         
         plt.xlabel('Time (s)')
         plt.ylabel('Average Cost')
